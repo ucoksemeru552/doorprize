@@ -7,10 +7,34 @@ body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);marg
 .logo{width:84px;height:84px;border-radius:12px;background:linear-gradient(135deg,#ffffff,#ffffff);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800}
 .card{background:var(--card);padding:16px;border-radius:12px;box-shadow:0 10px 30px rgba(16,24,40,0.06);margin-top:18px}
 
+/* New styles for separating sections */
+.section-container {
+    display: flex;
+    gap: 20px; /* Space between the two boxes */
+    flex-wrap: wrap; /* Allows wrapping on smaller screens */
+    justify-content: center; /* Center boxes when they wrap */
+}
+
+.section-box {
+    flex: 1; /* Allows boxes to grow and shrink */
+    min-width: 280px; /* Minimum width before wrapping */
+    border: 1px solid #e6e9ef; /* Border for separation */
+    border-radius: 12px; /* Rounded corners for the boxes */
+    padding: 16px; /* Padding inside the boxes */
+    box-shadow: 0 5px 15px rgba(16,24,40,0.03); /* Subtle shadow */
+    margin-bottom: 12px; /* Space below the boxes on wrap */
+}
+
 .inputs{display:flex;flex-wrap:wrap;gap:8px}
-input[type="text"], input[type="number"], input[type="password"], select{padding:10px;border-radius:10px;border:1px solid #e6e9ef;font-weight:600;font-size:14px;outline:none;background:#fff;text-align:center}
+input[type="text"], input[type="number"], input[type="password"], select{padding:10px;border-radius:10px;border:1px solid #e6e9ef;font-weight:600;font-size:14px;outline:none;background:#fff;text-align:center; flex-grow: 1;}
 input[type="text"]:hover, input[type="number"]:hover, input[type="password"]:hover, select:hover{background:#fff;box-shadow:none} /* remove hover color */
 input[autocomplete="off"]::-webkit-autofill{background-clip:content-box}
+
+/* New style for full width buttons */
+.full-width-btn {
+    width: 100%;
+    flex-shrink: 0; /* Prevent button from shrinking */
+}
 
 table{width:100%;border-collapse:collapse;margin-top:12px}
 th,td{padding:8px;border-bottom:1px solid #eef2ff;text-align:left}
@@ -22,7 +46,15 @@ button{padding:10px 14px;border-radius:10px;border:0;background:var(--accent);co
 button.ghost{background:#eef2ff;color:#0b1320}
 
 /* small responsive tweaks */
-@media(max-width:720px){.top{flex-direction:column;align-items:flex-start}.inputs{flex-direction:column} .brand .meta{display:none}}
+@media(max-width:720px){
+    .top{flex-direction:column;align-items:flex-start}
+    .inputs{flex-direction:column}
+    .brand .meta{display:none}
+    .section-container {
+        flex-direction: column; /* Stack boxes vertically on small screens */
+        gap: 12px; /* Smaller gap when stacked */
+    }
+}
 
 /* --- MODIFIED MODAL STYLES --- */
 .modal {
