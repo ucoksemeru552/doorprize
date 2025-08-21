@@ -151,6 +151,7 @@ function loginAdmin() {
             // Signed in
             console.log("Firebase login successful:", userCredential.user);
             showMessage('Logged in successfully');
+            emailEl.value = '';
             passEl.value = '';
         })
         .catch((error) => {
