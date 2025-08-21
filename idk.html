@@ -26,24 +26,23 @@
     </div>
 
     <div class="card">
-      <!-- FIXED: Changed align-items:center to align-items:flex-start -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;justify-content:space-between">
-        <div style="flex:1;min-width:260px">
+      <div class="section-container">
+        <div class="section-box">
           <div style="font-weight:700;margin-bottom:6px">Pendaftaran</div>
           <div class="inputs">
             <input id="name" type="text" placeholder="Nama Anda" autocomplete="off">
             <input id="rt" type="text" placeholder="Nomor RT" autocomplete="off">
-            <button id="registerBtn">Daftar</button>
+            <button id="registerBtn" class="full-width-btn">Daftar</button>
           </div>
         </div>
 
-        <div style="min-width:260px">
+        <div class="section-box admin-section">
           <div style="font-weight:700;margin-bottom:6px">Admin</div>
           <div class="inputs">
             <input id="adminEmail" type="text" placeholder="Email" autocomplete="off">
             <input id="adminPass" type="password" placeholder="Password" autocomplete="off">
-            <button id="adminLogin">Login</button>
-            <button id="adminLogout" class="ghost" style="display:none">Logout</button>
+            <button id="adminLogin" class="full-width-btn">Login</button>
+            <button id="adminLogout" class="ghost full-width-btn" style="display:none">Logout</button>
           </div>
         </div>
       </div>
