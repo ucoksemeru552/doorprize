@@ -1,7 +1,7 @@
 // ====== CONFIGURE THESE ======
 const FIREBASE_CONFIG = {
   // IMPORTANT: fill this with your actual firebase project settings
-  apiKey: process.env.firebase_api_key,,
+  apiKey: process.env.firebase_api_key,
   authDomain: process.env.firebase_auth_domain,
   databaseURL: process.env.firebase_database_url,
   projectId: process.env.firebase_project_id,
