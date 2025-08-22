@@ -2,12 +2,12 @@
   "name": "your-doorprize-app",
   "version": "1.0.0",
   "scripts": {
-    "build": "webpack --mode production" // or "parcel build index.html" etc.
+    "build": "webpack --mode production"
   },
   "devDependencies": {
     "webpack": "^5.0.0",
     "webpack-cli": "^5.0.0",
     "html-webpack-plugin": "^5.0.0",
-    "dotenv-webpack": "^8.0.1" // this is crucial for injecting .env vars
+    "dotenv-webpack": "^8.0.1"
   }
 }
