@@ -13,12 +13,22 @@ const FIREBASE_CONFIG = {
 // ============================
 
 // init firebase
-firebase.initializeApp(FIREBASE_CONFIG);
-const auth = firebase.auth();
-const db = firebase.database();
-const usersRef = db.ref('users');
-const winnersRef = db.ref('winners');
-const deviceRegRef = db.ref('deviceRegistrations');
+// CHANGE THIS: Use the functions directly from the imported SDKs
+// import { initializeApp } from "firebase/app";  <-- this should be at the very top of your file
+// import { getAuth } from "firebase/auth";
+// import { getDatabase, ref } from "firebase/database";
+
+// Assuming you've already imported these at the very top of your script:
+import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getDatabase, ref } from "firebase/database";
+
+const app = initializeApp(FIREBASE_CONFIG); // Use the imported initializeApp
+const auth = getAuth(app); // Use getAuth with the app instance
+const db = getDatabase(app); // Use getDatabase with the app instance
+const usersRef = ref(db, 'users'); // Use ref with the database instance
+const winnersRef = ref(db, 'winners'); // Use ref with the database instance
+const deviceRegRef = ref(db, 'deviceRegistrations'); // Use ref with the database instance
 
 // Global variables
 let currentSpinCount = 0;
@@ -561,4 +571,5 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('confirmModal').classList.remove('show');
     });
 });
+
 
