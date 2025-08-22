@@ -1,14 +1,14 @@
 // ====== CONFIGURE THESE ======
 const FIREBASE_CONFIG = {
   // IMPORTANT: fill this with your actual firebase project settings
-  apiKey: "AIzaSyAleOmoznhqDBW04Kr2T3q4aucv2KJ58gc",
-  authDomain: "doorprize-katar-06.firebaseapp.com",
-  databaseURL: "https://doorprize-katar-06-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "doorprize-katar-06",
-  storageBucket: "doorprize-katar-06.firebasestorage.app",
-  messagingSenderId: "851525724506",
-  appId: "1:851525724506:web:8579d95626210d50312b63",
-  measurementId: "G-X1QHZMCGGD"
+  apiKey: process.env.firebase_api_key,,
+  authDomain: process.env.firebase_auth_domain,
+  databaseURL: process.env.firebase_database_url,
+  projectId: process.env.firebase_project_id,
+  storageBucket: process.env.firebase_storage_bucket,
+  messagingSenderId: process.env.firebase_messaging_sender_id,
+  appId: process.env.firebase_app_id,
+  measurementId: process.env.firebase_measurement_id
 };
 // ============================
 
@@ -561,3 +561,4 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('confirmModal').classList.remove('show');
     });
 });
+
