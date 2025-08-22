@@ -31,13 +31,39 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # --- NEW STEPS FOR BUILD PROCESS ---
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # Use a Node.js version compatible with your project
+
+      - name: Install dependencies
+        run: npm install # Assumes you have a package.json
+
+      - name: Build project
+        run: npm run build # This command should trigger your build tool (e.g., webpack, parcel)
+        env: # Pass your secrets as environment variables to the build step
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_DATABASE_URL: ${{ secrets.FIREBASE_DATABASE_URL }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
+      # --- END NEW STEPS ---
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: '.'
+          # IMPORTANT: Point this to your *build output directory*, not '.'
+          # Common build directories are 'build', 'dist', 'public'
+          path: 'dist' # Change 'dist' to your actual build output directory
+          
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
