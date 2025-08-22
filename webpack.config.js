@@ -4,16 +4,24 @@ const path = require('path');
 
 module.exports = {
   mode: 'production',
-  entry: './script-idk.js', // change this to your main JS file
+  entry: './script-idk.js',
   output: {
     filename: 'main.js',
     path: path.resolve(__dirname, 'dist'),
-    clean: true, // this will clean the dist folder before each build
+    clean: true,
+  },
+  module: { // <-- ADD THIS MODULE SECTION
+    rules: [
+      {
+        test: /\.css$/, // Look for files ending with .css
+        use: ['style-loader', 'css-loader'], // Use these loaders
+      },
+    ],
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: './idk.html' // change this to your main HTML file
+      template: './idk.html'
     }),
-    new Dotenv() // this handles the environment variables
+    new Dotenv()
   ]
 };
