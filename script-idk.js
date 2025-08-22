@@ -1,7 +1,7 @@
 // ====== CONFIGURE THESE ======
 const FIREBASE_CONFIG = {
   // IMPORTANT: fill this with your actual firebase project settings
-  apikkey: process.env.firebase_api_key,
+  apiKey: "AIzaSyAleOmoznhqDBW04Kr2T3q4aucv2KJ58gc",
   authDomain: "doorprize-katar-06.firebaseapp.com",
   databaseURL: "https://doorprize-katar-06-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "doorprize-katar-06",
@@ -18,22 +18,76 @@ const auth = firebase.auth();
 const db = firebase.database();
 const usersRef = db.ref('users');
 const winnersRef = db.ref('winners');
+const deviceRegRef = db.ref('deviceRegistrations');
+
+// Global variables
+let currentSpinCount = 0;
+let totalSpinsNeeded = 0;
+let eligibleUsersForSpin = [];
+let winnersQueue = [];
+let localUser = null; // To hold current user state
+
+// --- Helper Functions ---
+function toTitleCase(str) {
+    return str.replace(
+        /\w\S*/g,
+        function(txt) {
+            return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+        }
+    );
+}
+
 
 // --- UI Functions ---
+
+// *** NEW: Functions to show/hide loading modal ***
+function showLoading(text = 'Loading...') {
+    const loadingModal = document.getElementById('loadingModal');
+    const loadingText = document.getElementById('loadingText');
+    if (loadingModal && loadingText) {
+        loadingText.textContent = text;
+        loadingModal.classList.add('show');
+    }
+}
+
+function hideLoading() {
+    const loadingModal = document.getElementById('loadingModal');
+    if (loadingModal) {
+        loadingModal.classList.remove('show');
+    }
+}
+
 
 function showMessage(text, isError = false) {
     const popupOk = document.getElementById('popupOk');
     const popupOkText = document.getElementById('popupOkText');
     const panel = document.getElementById('popupOkPanel');
+    const popupOkCloseBtn = document.getElementById('popupOkClose');
+    const spinBtn = document.getElementById('spinBtn');
 
-    if (popupOk && popupOkText && panel) {
+    if (popupOk && popupOkText && panel && popupOkCloseBtn) {
         popupOkText.textContent = text;
         panel.style.borderTop = isError ? '4px solid #ef4444' : '4px solid var(--accent)';
         popupOk.classList.add('show');
 
-        setTimeout(() => {
-            popupOk.classList.remove('show');
-        }, 4000);
+        if (totalSpinsNeeded > 0 && currentSpinCount < totalSpinsNeeded && !isError) {
+            popupOkCloseBtn.style.display = 'block';
+            popupOkCloseBtn.onclick = () => {
+                popupOk.classList.remove('show');
+                if (currentSpinCount < totalSpinsNeeded) {
+                    spinWheelInternal();
+                } else {
+                    if (spinBtn) spinBtn.disabled = false;
+                    totalSpinsNeeded = 0;
+                    currentSpinCount = 0;
+                }
+            };
+        } else {
+            if (spinBtn) spinBtn.disabled = false;
+            popupOkCloseBtn.style.display = 'block';
+            popupOkCloseBtn.onclick = () => popupOk.classList.remove('show');
+            setTimeout(() => popupOk.classList.remove('show'), 4000);
+        }
     } else {
         console.error("Popup elements not found!");
     }
@@ -53,15 +107,8 @@ function confirmAction(text, callback) {
     confirmText.textContent = text;
     modal.classList.add('show');
 
-    const onYes = () => {
-        cleanup();
-        callback(true);
-    };
-
-    const onNo = () => {
-        cleanup();
-        callback(false);
-    };
+    const onYes = () => { cleanup(); callback(true); };
+    const onNo = () => { cleanup(); callback(false); };
 
     const cleanup = () => {
         modal.classList.remove('show');
@@ -78,35 +125,85 @@ function confirmAction(text, callback) {
 
 // --- User Registration ---
 
-function registerUser() {
+async function registerUser() {
+    if (!localUser) {
+        return showMessage('Mohon tunggu, sedang memverifikasi perangkat...', true);
+    }
+
     const nameIn = document.getElementById('name');
     const rtIn = document.getElementById('rt');
     const name = nameIn.value.trim();
     let rt = rtIn.value.trim();
-    if (!name || !rt) {
-        showMessage('Please fill in all fields.', true);
-        return;
-    }
 
+    if (!name || !rt) return showMessage('please fill in all fields.', true);
+    if (isNaN(parseInt(rt)) || !/^\d+$/.test(rt)) return showMessage('nomor rt harus berupa angka. contoh: "01" atau "02".', true);
+    if (name.length < 3) return showMessage(`isi nama minimal 3 karakter.`, true);
+
+    const formattedName = toTitleCase(name);
     const uniqueKey = name.toLowerCase() + '-' + rt;
 
-    usersRef.orderByChild('unique').equalTo(uniqueKey).once('value', snapshot => {
-        if (snapshot.exists()) {
-            showMessage(`Name ${name} from RT ${rt} is already registered!`, true);
-        } else {
-            const newRef = usersRef.push();
-            newRef.set({ name, rt, unique: uniqueKey, key: newRef.key }).then(() => {
-                showMessage(`Successfully registered ${name} (RT ${rt}). Thank you!`);
-                nameIn.value = '';
-                rtIn.value = '';
-            }).catch(err => {
-                showMessage(`Error: ${err.message}`, true);
-            });
-        }
+    const snapshot = await usersRef.once('value');
+    let isDuplicate = false;
+    snapshot.forEach(child => {
+        if (child.val().unique === uniqueKey) isDuplicate = true;
     });
+
+    if (isDuplicate) return showMessage(`Partisipan ini sudah terdaftar!`, true);
+
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const displayTimestamp = `${hours}:${minutes}:${seconds} WIB`;
+    const userKey = now.getTime().toString();
+    
+    const deviceId = localUser.uid;
+
+    const userData = {
+        name: formattedName,
+        rt: rt,
+        unique: uniqueKey,
+        key: userKey,
+        timestamp: displayTimestamp,
+        deviceId: deviceId
+    };
+
+    try {
+        await usersRef.child(userKey).set(userData);
+        if (!localUser.isAdmin) {
+            await deviceRegRef.child(deviceId).set({ registered: true, timestamp: displayTimestamp });
+        }
+        showMessage(`Berhasil mendaftarkan doorprize!`);
+        if (localUser.isAdmin) {
+            nameIn.value = '';
+            rtIn.value = '';
+        } else {
+            lockRegistrationForm();
+        }
+    } catch (err) {
+        showMessage(`error: ${err.message}`, true);
+    }
 }
 
-// --- Admin Section ---
+// --- Admin & Auth Section ---
+
+function lockRegistrationForm(message = 'Perangkat ini sudah terdaftar.') {
+    const nameIn = document.getElementById('name');
+    const rtIn = document.getElementById('rt');
+    const registerBtn = document.getElementById('registerBtn');
+    if(nameIn) { nameIn.readOnly = true; nameIn.value = message; }
+    if(rtIn) { rtIn.readOnly = true; rtIn.value = ''; }
+    if(registerBtn) { registerBtn.disabled = true; }
+}
+
+function unlockRegistrationForm() {
+    const nameIn = document.getElementById('name');
+    const rtIn = document.getElementById('rt');
+    const registerBtn = document.getElementById('registerBtn');
+    if(nameIn) { nameIn.readOnly = false; nameIn.value = ''; }
+    if(rtIn) { rtIn.readOnly = false; rtIn.value = ''; }
+    if(registerBtn) { registerBtn.disabled = false; }
+}
 
 function setAdminMode(enabled) {
     const loginBtn = document.getElementById('adminLogin');
@@ -114,13 +211,13 @@ function setAdminMode(enabled) {
     const emailEl = document.getElementById('adminEmail');
     const passEl = document.getElementById('adminPass');
 
-
     if (enabled) {
         document.body.classList.add('is-admin');
         if(loginBtn) loginBtn.style.display = 'none';
         if(logoutBtn) logoutBtn.style.display = 'inline-block';
         if(emailEl) emailEl.readOnly = true;
         if(passEl) passEl.readOnly = true;
+        unlockRegistrationForm();
         listenToData();
     } else {
         document.body.classList.remove('is-admin');
@@ -132,45 +229,46 @@ function setAdminMode(enabled) {
 }
 
 function loginAdmin() {
-    console.log("Login button clicked. Attempting to sign in...");
     const emailEl = document.getElementById('adminEmail');
     const passEl = document.getElementById('adminPass');
     const email = emailEl.value;
     const password = passEl.value;
 
-    if (!email || !password) {
-        showMessage("Email and password cannot be empty.", true);
-        console.error("Login failed: Email or password was empty.");
-        return;
-    }
+    if (!email || !password) return showMessage("email and password cannot be empty.", true);
     
-    console.log(`Attempting login with email: ${email}`);
+    // *** NEW: Show loading message ***
+    showLoading('Logging in...');
 
     auth.signInWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-            // Signed in
-            console.log("Firebase login successful:", userCredential.user);
-            showMessage('Logged in successfully');
+        .then(() => {
+            hideLoading();
+            showMessage('Successfully logged in.');
             emailEl.value = '';
             passEl.value = '';
         })
-        .catch((error) => {
-            console.error("Firebase login failed:", error);
-            showMessage(error.message, true);
+        .catch(error => {
+            hideLoading();
+            showMessage(error.message, true)
         });
 }
 
 function logoutAdmin() {
-    auth.signOut().then(() => {
-        showMessage('Logged out.');
-    }).catch((error) => {
-        showMessage(error.message, true);
-    });
+    // *** NEW: Show loading message ***
+    showLoading('Logging out...');
+
+    auth.signOut()
+        .then(() => {
+            hideLoading();
+            showMessage('Successfully logged out.');
+        })
+        .catch(error => {
+            hideLoading();
+            showMessage(error.message, true);
+        });
 }
 
 
 function listenToData() {
-    // Listen for participants
     usersRef.on('value', snapshot => {
         const tbody = document.getElementById('participantsBody');
         const statusEl = document.getElementById('status');
@@ -178,41 +276,35 @@ function listenToData() {
 
         tbody.innerHTML = '';
         const users = snapshot.val() || {};
-        const userCount = Object.keys(users).length;
-        statusEl.textContent = `Participants: ${userCount}`;
+        statusEl.textContent = `Partisipan: ${Object.keys(users).length}`;
         
         let count = 1;
         snapshot.forEach(child => {
             const u = child.val();
             const key = child.key;
             const row = document.createElement('tr');
-            row.innerHTML = `<td>${count++}</td><td>${u.name}</td><td>${u.rt}</td>
-                             <td class="right admin-tool admin-tool-cell"><button class='del ghost' onclick='deleteUser("${key}", "${u.name}")'>Hapus</button></td>`;
+            const timestamp = u.timestamp || '-';
+            row.innerHTML = `<td>${count++}</td><td>${u.name}</td><td>${u.rt}</td><td>${timestamp}</td>
+                             <td class="right admin-tool admin-tool-cell">
+                                <button class='del ghost' onclick='resetRegistration("${key}", "${u.name}", "${u.deviceId}")'>Reset</button>
+                                <button class='del ghost' onclick='deleteUser("${key}", "${u.name}", "${u.deviceId}")'>Hapus</button>
+                             </td>`;
             tbody.appendChild(row);
         });
         updateEligibleCount();
     });
 
-    // Listen for winners
     winnersRef.on('value', snapshot => {
         const winnersBody = document.getElementById('winnersBody');
-        const winnerCountInput = document.getElementById('winnerCount');
-        if (!winnersBody || !winnerCountInput) return;
-
+        if (!winnersBody) return;
         winnersBody.innerHTML = '';
-        
-        if (snapshot.exists()) {
-            winnerCountInput.disabled = true;
-        } else {
-            winnerCountInput.disabled = false;
-        }
-        
         let count = 1;
         snapshot.forEach(child => {
             const winner = child.val();
             const key = child.key;
             const row = document.createElement('tr');
-            row.innerHTML = `<td>${count++}</td><td>${winner.name}</td><td>${winner.rt}</td>
+            const timestamp = winner.timestamp || '-';
+            row.innerHTML = `<td>${count++}</td><td>${winner.name}</td><td>${winner.rt}</td><td>${timestamp}</td>
                              <td class="right admin-tool admin-tool-cell"><button class='del ghost' onclick='deleteWinner("${key}", "${winner.name}")'>Hapus</button></td>`;
             winnersBody.appendChild(row);
         });
@@ -220,16 +312,25 @@ function listenToData() {
     });
 }
 
-function deleteUser(key, name) {
-    confirmAction(`Hapus partisipan ${name}?`, (ok) => {
+function resetRegistration(key, name, deviceId) {
+    confirmAction(`Ini akan menghapus ${name} dari daftar dan mengizinkan perangkat mereka untuk mendaftar lagi. Lanjutkan?`, (ok) => {
+        if (ok) {
+            usersRef.child(key).remove();
+            if (deviceId) deviceRegRef.child(deviceId).remove();
+            showMessage(`${name} telah direset. Minta mereka untuk me-refresh halaman mereka untuk mendaftar lagi.`, false);
+        }
+    });
+}
+
+function deleteUser(key, name, deviceId) {
+    confirmAction(`Hapus partisipan ${name} secara permanen?`, (ok) => {
         if (ok) {
             winnersRef.orderByChild('key').equalTo(key).once('value', snapshot => {
-                snapshot.forEach(child => {
-                    winnersRef.child(child.key).remove();
-                });
+                snapshot.forEach(child => winnersRef.child(child.key).remove());
             });
             usersRef.child(key).remove();
-            showMessage(`${name} Telah di hapus.`, false);
+            if (deviceId) deviceRegRef.child(deviceId).remove();
+            showMessage(`${name} telah di hapus.`, false);
         }
     });
 }
@@ -238,30 +339,31 @@ function deleteWinner(key, name) {
     confirmAction(`Hapus ${name} dari list pemenang? Partisipan ini dapat memenangkan hadiah lagi.`, (ok) => {
         if (ok) {
             winnersRef.child(key).remove();
-            showMessage(`${name} Telah di hapus dari list pemenang.`, false);
+            showMessage(`${name} telah di hapus dari list pemenang.`, false);
         }
     });
 }
 
 function resetAll() {
-    confirmAction('DANGER! This will delete ALL users and winners.', (ok) => {
+    confirmAction('BAHAYA! INI BAKAL NGEHAPUS SEMUA PARTISIPAN, PEMENANG, DAN KUNCI PERANGKAT. Apakah kamu yakin?', (ok) => {
         if (ok) {
             usersRef.remove();
             winnersRef.remove();
+            deviceRegRef.remove();
             const reel = document.getElementById('spinnerReel');
             if(reel) reel.innerHTML = '';
-            showMessage('All data has been reset.', false);
+            showMessage('Semua data telah di reset.', false);
         }
     });
 }
 
 function removeWinners() {
-     confirmAction('This will clear the entire winners list, making everyone eligible again.', (ok) => {
+     confirmAction('BAHAYA! INI BAKAL NGEHAPUS SEMUA PEMENANG. Apakah kamu yakin?', (ok) => {
         if (ok) {
             winnersRef.remove();
             const reel = document.getElementById('spinnerReel');
             if(reel) reel.innerHTML = '';
-            showMessage('Winners list has been reset.', false);
+            showMessage('Daftar pemenang telah direset.', false);
         }
     });
 }
@@ -269,16 +371,12 @@ function removeWinners() {
 
 function exportToCSV() {
     usersRef.once('value', snapshot => {
-        if (!snapshot.exists()) {
-            showMessage('No users to export.', true);
-            return;
-        }
-        let csvContent = 'No.;Nama;RT Number\n';
+        if (!snapshot.exists()) return showMessage('Tidak ada partisipan untuk diekspor.', true);
+        let csvContent = 'no.;nama;rt number;waktu\n';
         let counter = 1;
         snapshot.forEach(child => {
             const u = child.val();
-            csvContent += `${counter};"${u.name.replace(/"/g, '""')}";${u.rt}\n`;
-            counter++;
+            csvContent += `${counter++};"${u.name.replace(/"/g, '""')}";${u.rt};${u.timestamp || '-'}\n`;
         });
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const a = document.createElement('a');
@@ -293,12 +391,11 @@ async function updateEligibleCount() {
     const winnersSnapshot = await winnersRef.get();
     const users = usersSnapshot.val() || {};
     const winners = winnersSnapshot.val() || {};
-
     const winnerKeys = new Set(Object.values(winners).map(w => w.key));
-    Object.keys(users).filter(key => !winnerKeys.has(key)).length;
+    eligibleUsersForSpin = Object.values(users).filter(user => !user.key || !winnerKeys.has(user.key));
 }
 
-// --- SPINNER LOGIC ---
+// --- SPINNER LOGIC (No changes here) ---
 
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -309,37 +406,57 @@ function shuffleArray(array) {
 }
 
 async function spinWheel() {
-    const reel = document.getElementById('spinnerReel');
     const spinBtn = document.getElementById('spinBtn');
     const winnerCountInput = document.getElementById('winnerCount');
-    if (!reel || !spinBtn || !winnerCountInput) return;
+    if (!spinBtn || !winnerCountInput) return;
 
-    const countToWin = parseInt(winnerCountInput.value, 10) || 1;
-
+    totalSpinsNeeded = parseInt(winnerCountInput.value, 10) || 1;
+    currentSpinCount = 0;
+    winnersQueue = [];
     spinBtn.disabled = true;
 
-    const usersSnapshot = await usersRef.get();
-    const winnersSnapshot = await winnersRef.get();
-    const users = usersSnapshot.val() || {};
-    const winners = winnersSnapshot.val() || {};
-    const winnerKeys = new Set(Object.values(winners).map(w => w.key));
-    let eligibleUsers = Object.values(users).filter(user => !user.key || !winnerKeys.has(user.key));
+    await updateEligibleCount();
 
-    if (eligibleUsers.length < countToWin) {
-        showMessage(`Tidak cukup partisipan. Kamu membutuhkan ${countToWin} orang, sedangkan kamu hanya mempunyai ${eligibleUsers.length} orang.`, true);
+    const allUsersSnapshot = await usersRef.get();
+    const allUsers = allUsersSnapshot.val() || {};
+    const totalParticipants = Object.keys(allUsers).length;
+    const totalWinners = (await winnersRef.get()).val() ? Object.keys((await winnersRef.get()).val()).length : 0;
+
+    if (totalParticipants > 0 && totalWinners >= totalParticipants) {
         spinBtn.disabled = false;
+        return showMessage('Semua partisipan sudah memenangkan hadiah.', true);
+    }
+
+    if (eligibleUsersForSpin.length < totalSpinsNeeded) {
+        spinBtn.disabled = false; 
+        return showMessage(`Tidak cukup partisipan. Butuh ${totalSpinsNeeded}, tersedia ${eligibleUsersForSpin.length}.`, true);
+    }
+
+    let tempEligibleUsers = [...eligibleUsersForSpin];
+    for (let i = 0; i < totalSpinsNeeded; i++) {
+        const winnerIndex = Math.floor(Math.random() * tempEligibleUsers.length);
+        winnersQueue.push(tempEligibleUsers[winnerIndex]);
+        tempEligibleUsers.splice(winnerIndex, 1);
+    }
+
+    spinWheelInternal();
+}
+
+function spinWheelInternal() {
+    const reel = document.getElementById('spinnerReel');
+    if (!reel) return;
+
+    if (currentSpinCount >= totalSpinsNeeded) {
+        const spinBtn = document.getElementById('spinBtn');
+        if (spinBtn) spinBtn.disabled = false;
+        totalSpinsNeeded = 0;
+        currentSpinCount = 0;
         return;
     }
 
-    const winnersPicked = [];
-    for (let i = 0; i < countToWin; i++) {
-        const winnerIndex = Math.floor(Math.random() * eligibleUsers.length);
-        winnersPicked.push(eligibleUsers[winnerIndex]);
-        eligibleUsers.splice(winnerIndex, 1);
-    }
-    
-    const lastWinner = winnersPicked[winnersPicked.length - 1];
-    
+    const currentWinner = winnersQueue[currentSpinCount];
+    currentSpinCount++;
+
     reel.style.transition = 'none';
     reel.style.transform = 'translateX(0)';
     reel.innerHTML = '';
@@ -347,55 +464,85 @@ async function spinWheel() {
     const itemWidth = 140;
     let reelItems = [];
     
-    const allUsersForReel = Object.values(users);
-    while (reelItems.length < 70) {
-        reelItems = reelItems.concat(shuffleArray([...allUsersForReel]));
-    }
+    usersRef.get().then(snapshot => {
+        const allUsersFromDb = snapshot.val() || {};
+        const allUsersForReel = [...eligibleUsersForSpin, ...Object.values(allUsersFromDb)];
 
-    const winnerIndexInReel = reelItems.length - (Math.floor(Math.random() * 10) + 5);
-    reelItems[winnerIndexInReel] = lastWinner;
+        while (reelItems.length < 70) {
+            reelItems = reelItems.concat(shuffleArray([...allUsersForReel]));
+        }
 
-    reelItems.forEach(user => {
-        const item = document.createElement('div');
-        item.className = 'spinner-item';
-        item.innerHTML = `<div class="spinner-item-name">${user.name}</div><div class="spinner-item-rt">RT: ${user.rt}</div>`;
-        reel.appendChild(item);
-    });
-    
-    const containerWidth = reel.parentElement.offsetWidth;
-    const targetPosition = (winnerIndexInReel * itemWidth) + (itemWidth / 2);
-    const offset = containerWidth / 2;
-    const randomJitter = (Math.random() - 0.5) * (itemWidth * 0.8);
-    const finalTranslateX = -targetPosition + offset + randomJitter;
+        const winnerDisplayIndex = reelItems.length - (Math.floor(Math.random() * 10) + 5);
+        reelItems[winnerDisplayIndex] = currentWinner;
 
-    reel.offsetHeight; 
-
-    reel.style.transition = 'transform 6s cubic-bezier(0.2, 0.8, 0.2, 1)';
-    reel.style.transform = `translateX(${finalTranslateX}px)`;
-
-    setTimeout(() => {
-        const winnerNames = winnersPicked.map(w => `${w.name} (RT ${w.rt})`).join(', ');
-        showMessage(`🎉 Winners: ${winnerNames}`);
-        
-        winnersPicked.forEach(winner => {
-            winnersRef.push(winner);
+        reelItems.forEach(user => {
+            const item = document.createElement('div');
+            item.className = 'spinner-item';
+            item.innerHTML = `<div class="spinner-item-name">${user.name}</div><div class="spinner-item-rt">rt: ${user.rt}</div>`;
+            reel.appendChild(item);
         });
         
-        spinBtn.disabled = false;
-    }, 6500);
+        const containerWidth = reel.parentElement.offsetWidth;
+        const targetPosition = (winnerDisplayIndex * itemWidth) + (itemWidth / 2);
+        const offset = containerWidth / 2;
+        const randomJitter = (Math.random() - 0.5) * (itemWidth * 0.8); 
+        const finalTranslateX = -targetPosition + offset + randomJitter;
+
+        reel.offsetHeight; 
+
+        reel.style.transition = 'transform 6s cubic-bezier(0.2, 0.8, 0.2, 1)';
+        reel.style.transform = `translateX(${finalTranslateX}px)`;
+
+        setTimeout(() => {
+            const currentWinnerName = `${currentWinner.name} (RT ${currentWinner.rt})`;
+            showMessage(`🎉 pemenang ${currentSpinCount} dari ${totalSpinsNeeded}: ${currentWinnerName}!`);
+            winnersRef.push(currentWinner);
+            updateEligibleCount();
+        }, 6500);
+    });
 }
 
+// --- NEW, ROBUST Authentication Handler ---
+async function handleUser(user) {
+    try {
+        if (user && !user.isAnonymous) {
+            // User is an admin
+            localUser = { uid: user.uid, isAdmin: true };
+            setAdminMode(true);
+        } else {
+            // User is anonymous
+            localUser = { uid: user.uid, isAdmin: false };
+            setAdminMode(false);
+            const deviceSnapshot = await deviceRegRef.child(user.uid).once('value');
+            if (deviceSnapshot.exists()) {
+                lockRegistrationForm();
+            } else {
+                unlockRegistrationForm();
+            }
+        }
+    } catch (dbError) {
+        console.error("Database check failed:", dbError);
+        // *** NEW: More specific error message for database rule issues ***
+        lockRegistrationForm('Gagal: Aturan database salah.');
+        showMessage('Gagal memeriksa status pendaftaran. Pastikan aturan database Anda benar.', true);
+    }
+}
 
 // --- Initial Setup ---
 document.addEventListener('DOMContentLoaded', () => {
     
+    lockRegistrationForm('Memverifikasi...');
+
     auth.onAuthStateChanged(user => {
         if (user) {
-            // User is signed in.
-            setAdminMode(true);
+            handleUser(user);
         } else {
-            // User is signed out.
-            setAdminMode(false);
+            auth.signInAnonymously().catch(authError => {
+                console.error("Anonymous sign in failed:", authError);
+                // *** NEW: More specific error message for auth issues ***
+                lockRegistrationForm('Gagal: Login anonim salah.');
+                showMessage('Gagal memverifikasi perangkat. Pastikan login anonim diaktifkan di Firebase.', true);
+            });
         }
     });
 
@@ -414,4 +561,3 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('confirmModal').classList.remove('show');
     });
 });
-

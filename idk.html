@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Registrasi Doorprize RW 06</title>
   <link rel="stylesheet" href="style-idk.css">
-  <link rel="icon" href="msi.png" type="image/png"/>
+  <link rel="icon" href="test1.png" type="image/png"/>
 </head>
 <body>
   <div class="container">
     <div class="top">
       <div class="brand">
         <div class="logo">
-            <img alt="logo-katar" src="msi-b.png" style="max-width:100%;max-height:100%;object-fit:contain;"/>
+            <img alt="logo-katar" src="katar06_title_big.png" style="max-width:100%;max-height:100%;object-fit:contain;"/>
         </div>
         <div>
           <div style="font-weight:800">Karang Taruna RW 06</div>
@@ -39,7 +39,7 @@
         <div class="section-box admin-section">
           <div style="font-weight:700;margin-bottom:6px">Admin</div>
           <div class="inputs">
-            <input id="adminEmail" type="text" placeholder="Email" autocomplete="off">
+            <input id="adminEmail" type="text" placeholder="Email" autocomplete="off" autocorrect="off" aria-autocomplete="none">
             <input id="adminPass" type="password" placeholder="Password" autocomplete="off">
             <button id="adminLogin" class="full-width-btn">Login</button>
             <button id="adminLogout" class="ghost full-width-btn" style="display:none">Logout</button>
@@ -52,14 +52,14 @@
           <div style="flex:1;min-width:300px">
               <div style="font-weight:700">Partisipan</div>
               <table id="participantsTable">
-                  <thead><tr><th>#</th><th>Nama</th><th>RT</th><th class="right admin-tool admin-tool-cell">Action</th></tr></thead>
+                  <thead><tr><th>#</th><th>Nama</th><th>RT</th><th>Waktu</th><th class="right admin-tool admin-tool-cell">Action</th></tr></thead>
                   <tbody id="participantsBody"></tbody>
               </table>
           </div>
           <div style="flex:1;min-width:300px">
               <div style="font-weight:700">Pemenang</div>
               <table id="winnersTable">
-                  <thead><tr><th>#</th><th>Nama</th><th>RT</th><th class="right admin-tool admin-tool-cell">Action</th></tr></thead>
+                  <thead><tr><th>#</th><th>Nama</th><th>RT</th><th>Waktu</th><th class="right admin-tool admin-tool-cell">Action</th></tr></thead>
                   <tbody id="winnersBody"></tbody>
               </table>
           </div>
@@ -112,6 +112,14 @@
       </div>
     </div>
   </div>
+  
+  <!-- *** NEW: Loading Modal *** -->
+  <div class="modal" id="loadingModal">
+      <div class="panel">
+          <div id="loadingText" style="font-weight:800; text-align:center;">Loading...</div>
+      </div>
+  </div>
+
 
   <!-- firebase compat -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>

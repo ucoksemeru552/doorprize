@@ -5,7 +5,7 @@ body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);marg
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{display:flex;gap:12px;align-items:center}
 .logo{width:84px;height:84px;border-radius:12px;background:linear-gradient(135deg,#ffffff,#ffffff);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800}
-.card{background:var(--card);padding:16px;border-radius:12px;box-shadow:0 10px 30px rgba(16,24,40,0.06);margin-top:18px}
+.card{background:var(--card);padding:50px;border-radius:12px;box-shadow:0 10px 30px rgba(16,24,40,0.06);margin-top:18px}
 
 /* New styles for separating sections */
 .section-container {
