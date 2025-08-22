@@ -4,8 +4,8 @@
   "scripts": {
     "build": "webpack --mode production"
   },
-  "dependencies": {  <--- ADD THIS SECTION
-    "firebase": "^9.23.0" <--- ADD THIS LINE (or the latest version you're using)
+  "dependencies": {  
+    "firebase": "^9.23.0"
   },
   "devDependencies": {
     "webpack": "^5.0.0",
