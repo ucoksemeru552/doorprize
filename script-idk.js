@@ -1,5 +1,3 @@
-import './style-idk.css'; // <-- ADD THIS LINE
-
 // ====== CONFIGURE THESE ======
 const FIREBASE_CONFIG = {
   // IMPORTANT: fill this with your actual firebase project settings
@@ -24,6 +22,7 @@ const FIREBASE_CONFIG = {
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getDatabase, ref } from "firebase/database";
+import './style-idk.css'; // <-- ADD THIS LINE
 
 const app = initializeApp(FIREBASE_CONFIG); // Use the imported initializeApp
 const auth = getAuth(app); // Use getAuth with the app instance
@@ -573,6 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('confirmModal').classList.remove('show');
     });
 });
+
 
 
 
