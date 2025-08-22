@@ -1,3 +1,5 @@
+import './style-idk.css'; // <-- ADD THIS LINE
+
 // ====== CONFIGURE THESE ======
 const FIREBASE_CONFIG = {
   // IMPORTANT: fill this with your actual firebase project settings
@@ -571,5 +573,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('confirmModal').classList.remove('show');
     });
 });
+
 
 
