@@ -18,7 +18,7 @@ firebase.initializeApp(FIREBASE_CONFIG);
 // Initialize App Check
 const appCheck = firebase.appCheck();
 appCheck.activate(
-  '6Ld7iQoqAAAAAGf-251r2np9p23_hBx-v0J_xX1o', // This is your public site key
+  '6LfipK4rAAAAAJsYzxtpQjF5t3jz6vSfgr3As_N-', // This is your public site key
   true);
 
 const auth = firebase.auth();
@@ -627,5 +627,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('confirmModal').classList.remove('show');
     });
 });
+
 
 
