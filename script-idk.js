@@ -14,6 +14,13 @@ const FIREBASE_CONFIG = {
 
 // init firebase
 firebase.initializeApp(FIREBASE_CONFIG);
+
+// Initialize App Check
+const appCheck = firebase.appCheck();
+appCheck.activate(
+  'gwgantengbangetanjeng', // Replace with your site key from the Firebase console
+  true);
+
 const auth = firebase.auth();
 const db = firebase.database();
 const usersRef = db.ref('users');
