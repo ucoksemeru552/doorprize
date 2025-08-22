@@ -18,7 +18,7 @@ firebase.initializeApp(FIREBASE_CONFIG);
 // Initialize App Check
 const appCheck = firebase.appCheck();
 appCheck.activate(
-  'gwgantengbangetanjeng', // Replace with your site key from the Firebase console
+  '6Ld7iQoqAAAAAGf-251r2np9p23_hBx-v0J_xX1o', // This is a public site key
   true);
 
 const auth = firebase.auth();
@@ -47,7 +47,6 @@ function toTitleCase(str) {
 
 // --- UI Functions ---
 
-// *** NEW: Functions to show/hide loading modal ***
 function showLoading(text = 'Loading...') {
     const loadingModal = document.getElementById('loadingModal');
     const loadingText = document.getElementById('loadingText');
@@ -243,7 +242,6 @@ function loginAdmin() {
 
     if (!email || !password) return showMessage("email and password cannot be empty.", true);
     
-    // *** NEW: Show loading message ***
     showLoading('Logging in...');
 
     auth.signInWithEmailAndPassword(email, password)
@@ -260,7 +258,6 @@ function loginAdmin() {
 }
 
 function logoutAdmin() {
-    // *** NEW: Show loading message ***
     showLoading('Logging out...');
 
     auth.signOut()
@@ -319,25 +316,63 @@ function listenToData() {
     });
 }
 
+// --- NEW ATOMIC DELETE FUNCTIONS ---
+
 function resetRegistration(key, name, deviceId) {
-    confirmAction(`Ini akan menghapus ${name} dari daftar dan mengizinkan perangkat mereka untuk mendaftar lagi. Lanjutkan?`, (ok) => {
-        if (ok) {
-            usersRef.child(key).remove();
-            if (deviceId) deviceRegRef.child(deviceId).remove();
+    confirmAction(`Ini akan menghapus ${name} dari daftar dan mengizinkan perangkat mereka untuk mendaftar lagi. Lanjutkan?`, async (ok) => {
+        if (!ok) return;
+
+        showLoading('Mereset pendaftaran...');
+
+        try {
+            const updates = {};
+            updates[`/users/${key}`] = null;
+            if (deviceId) {
+                updates[`/deviceRegistrations/${deviceId}`] = null;
+            }
+
+            await db.ref().update(updates);
+
+            hideLoading();
             showMessage(`${name} telah direset. Minta mereka untuk me-refresh halaman mereka untuk mendaftar lagi.`, false);
+
+        } catch (error) {
+            hideLoading();
+            console.error("Error resetting registration:", error);
+            showMessage(`Gagal mereset ${name}: ${error.message}`, true);
         }
     });
 }
 
-function deleteUser(key, name, deviceId) {
-    confirmAction(`Hapus partisipan ${name} secara permanen?`, (ok) => {
-        if (ok) {
-            winnersRef.orderByChild('key').equalTo(key).once('value', snapshot => {
-                snapshot.forEach(child => winnersRef.child(child.key).remove());
-            });
-            usersRef.child(key).remove();
-            if (deviceId) deviceRegRef.child(deviceId).remove();
-            showMessage(`${name} telah di hapus.`, false);
+async function deleteUser(key, name, deviceId) {
+    confirmAction(`Hapus partisipan ${name} secara permanen?`, async (ok) => {
+        if (!ok) return;
+
+        showLoading('Menghapus data...');
+
+        try {
+            const updates = {};
+            updates[`/users/${key}`] = null;
+            if (deviceId) {
+                updates[`/deviceRegistrations/${deviceId}`] = null;
+            }
+
+            const winnerSnapshot = await winnersRef.orderByChild('key').equalTo(key).once('value');
+            if (winnerSnapshot.exists()) {
+                winnerSnapshot.forEach(child => {
+                    updates[`/winners/${child.key}`] = null;
+                });
+            }
+
+            await db.ref().update(updates);
+
+            hideLoading();
+            showMessage(`${name} telah dihapus.`, false);
+
+        } catch (error) {
+            hideLoading();
+            console.error("Error deleting user:", error);
+            showMessage(`Gagal menghapus ${name}: ${error.message}`, true);
         }
     });
 }
@@ -345,8 +380,9 @@ function deleteUser(key, name, deviceId) {
 function deleteWinner(key, name) {
     confirmAction(`Hapus ${name} dari list pemenang? Partisipan ini dapat memenangkan hadiah lagi.`, (ok) => {
         if (ok) {
-            winnersRef.child(key).remove();
-            showMessage(`${name} telah di hapus dari list pemenang.`, false);
+            winnersRef.child(key).remove()
+              .then(() => showMessage(`${name} telah di hapus dari list pemenang.`, false))
+              .catch(error => showMessage(`Gagal menghapus pemenang: ${error.message}`, true));
         }
     });
 }
@@ -354,12 +390,13 @@ function deleteWinner(key, name) {
 function resetAll() {
     confirmAction('BAHAYA! INI BAKAL NGEHAPUS SEMUA PARTISIPAN, PEMENANG, DAN KUNCI PERANGKAT. Apakah kamu yakin?', (ok) => {
         if (ok) {
-            usersRef.remove();
-            winnersRef.remove();
-            deviceRegRef.remove();
-            const reel = document.getElementById('spinnerReel');
-            if(reel) reel.innerHTML = '';
-            showMessage('Semua data telah di reset.', false);
+            db.ref().set(null) // Deletes the entire database
+                .then(() => {
+                    const reel = document.getElementById('spinnerReel');
+                    if(reel) reel.innerHTML = '';
+                    showMessage('Semua data telah di reset.', false);
+                })
+                .catch(error => showMessage(`Gagal mereset: ${error.message}`, true));
         }
     });
 }
@@ -367,10 +404,13 @@ function resetAll() {
 function removeWinners() {
      confirmAction('BAHAYA! INI BAKAL NGEHAPUS SEMUA PEMENANG. Apakah kamu yakin?', (ok) => {
         if (ok) {
-            winnersRef.remove();
-            const reel = document.getElementById('spinnerReel');
-            if(reel) reel.innerHTML = '';
-            showMessage('Daftar pemenang telah direset.', false);
+            winnersRef.remove()
+                .then(() => {
+                    const reel = document.getElementById('spinnerReel');
+                    if(reel) reel.innerHTML = '';
+                    showMessage('Daftar pemenang telah direset.', false);
+                })
+                .catch(error => showMessage(`Gagal mereset pemenang: ${error.message}`, true));
         }
     });
 }
@@ -402,7 +442,7 @@ async function updateEligibleCount() {
     eligibleUsersForSpin = Object.values(users).filter(user => !user.key || !winnerKeys.has(user.key));
 }
 
-// --- SPINNER LOGIC (No changes here) ---
+// --- SPINNER LOGIC ---
 
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -509,7 +549,7 @@ function spinWheelInternal() {
     });
 }
 
-// --- NEW, ROBUST Authentication Handler ---
+// --- Authentication Handler ---
 async function handleUser(user) {
     try {
         if (user && !user.isAnonymous) {
@@ -529,7 +569,6 @@ async function handleUser(user) {
         }
     } catch (dbError) {
         console.error("Database check failed:", dbError);
-        // *** NEW: More specific error message for database rule issues ***
         lockRegistrationForm('Gagal: Aturan database salah.');
         showMessage('Gagal memeriksa status pendaftaran. Pastikan aturan database Anda benar.', true);
     }
@@ -546,7 +585,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             auth.signInAnonymously().catch(authError => {
                 console.error("Anonymous sign in failed:", authError);
-                // *** NEW: More specific error message for auth issues ***
                 lockRegistrationForm('Gagal: Login anonim salah.');
                 showMessage('Gagal memverifikasi perangkat. Pastikan login anonim diaktifkan di Firebase.', true);
             });
