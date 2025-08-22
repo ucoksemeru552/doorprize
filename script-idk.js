@@ -47,13 +47,6 @@ function toTitleCase(str) {
 
 // --- UI Functions ---
 
-function onClick(e) {
-  e.preventDefault();
-  grecaptcha.enterprise.ready(async () => {
-    const token = await grecaptcha.enterprise.execute('6Lcpwq4rAAAAAPMoWv0vJdUSSWTI3SsQsGl9Xk2K', {action: 'LOGIN'});
-  });
-}
-
 function showLoading(text = 'Loading...') {
     const loadingModal = document.getElementById('loadingModal');
     const loadingText = document.getElementById('loadingText');
@@ -634,4 +627,5 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('confirmModal').classList.remove('show');
     });
 });
+
 
