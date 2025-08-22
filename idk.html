@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Registrasi Doorprize RW 06</title>
+  <link rel="stylesheet" href="style-idk.css">
+  <link rel="icon" href="test1.png" type="image/png"/>
+</head>
+<body>
+  <div class="container">
+    <div class="top">
+      <div class="brand">
+        <div class="logo">
+            <img alt="logo-katar" src="katar06_title_big.png" style="max-width:100%;max-height:100%;object-fit:contain;"/>
+        </div>
+        <div>
+          <div style="font-weight:800">Karang Taruna RW 06</div>
+          <div style="font-size:13px;color:var(--muted)">Jl. Tebet Timur Dalam VI E, RT.2/RW.6</div>
+          <div style="font-size:13px;color:var(--muted)">Kode Pos: 12820</div>
+        </div>
+      </div>
+      <div class="meta">
+        <div id="status" style="text-align:right;font-weight:700;color:var(--muted)"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-container">
+        <div class="section-box">
+          <div style="font-weight:700;margin-bottom:6px">Pendaftaran</div>
+          <div class="inputs">
+            <input id="name" type="text" placeholder="Nama Anda" autocomplete="off">
+            <input id="rt" type="text" placeholder="Nomor RT" autocomplete="off">
+            <button id="registerBtn" class="full-width-btn">Daftar</button>
+          </div>
+        </div>
+
+        <div class="section-box admin-section">
+          <div style="font-weight:700;margin-bottom:6px">Admin</div>
+          <div class="inputs">
+            <input id="adminEmail" type="text" placeholder="Email" autocomplete="off" autocorrect="off" aria-autocomplete="none">
+            <input id="adminPass" type="password" placeholder="Password" autocomplete="off">
+            <button id="adminLogin" class="full-width-btn">Login</button>
+            <button id="adminLogout" class="ghost full-width-btn" style="display:none">Logout</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin-only section -->
+      <div class="admin-tool admin-tool-flex" style="margin-top:12px;gap:12px;align-items:flex-start;flex-wrap:wrap">
+          <div style="flex:1;min-width:300px">
+              <div style="font-weight:700">Partisipan</div>
+              <table id="participantsTable">
+                  <thead><tr><th>#</th><th>Nama</th><th>RT</th><th>Waktu</th><th class="right admin-tool admin-tool-cell">Action</th></tr></thead>
+                  <tbody id="participantsBody"></tbody>
+              </table>
+          </div>
+          <div style="flex:1;min-width:300px">
+              <div style="font-weight:700">Pemenang</div>
+              <table id="winnersTable">
+                  <thead><tr><th>#</th><th>Nama</th><th>RT</th><th>Waktu</th><th class="right admin-tool admin-tool-cell">Action</th></tr></thead>
+                  <tbody id="winnersBody"></tbody>
+              </table>
+          </div>
+      </div>
+      <div class="admin-tool" style="margin-top:18px;">
+          <div style="width:100%; max-width: 450px;">
+            <div style="font-weight:700;margin-bottom:8px">Spin Pemenang</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+              <input id="winnerCount" type="number" min="1" value="1" style="width:80px;text-align:center">
+              <button id="spinBtn">Spin</button>
+              <button id="removeWinners" class="ghost">Reset Pemenang</button>
+            </div>
+            <div style="margin-top:-4px; margin-bottom: 8px; font-size:13px;color:var(--muted);"><i>Note: Angka disamping tombol "Spin" buat ngatur seberapa banyak pemenang yang bakal di undi.</i></div>
+            <div class="spinner-container">
+              <div class="spinner-pointer"></div>
+              <div class="spinner-reel" id="spinnerReel"></div>
+            </div>
+            <div style="margin-top:8px;font-size:13px;color:var(--muted);"><i>Note: Ini bakal muter kayak buka Case CGSO</i></div>
+          </div>
+      </div>
+      <!-- End Admin-only section -->
+
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:space-between;align-items:center">
+        <div>
+          <button id="exportJson" class="ghost admin-tool admin-tool-inline-block">Export Partisipan (JSON)</button>
+          <button id="clearAll" class="ghost admin-tool admin-tool-inline-block">Hapus Semua (Admin Only)</button>
+        </div>
+      </div>
+      
+      <div style="text-align: center; margin-top: 20px; font-size: 12px; color: var(--muted);">
+        Made by Karang Taruna RW 06 | Powered by Gemini
+      </div>
+    </div>
+  </div>
+
+  <!-- modals -->
+  <div class="modal" id="popupOk">
+    <div class="panel" id="popupOkPanel">
+      <div id="popupOkText" style="font-weight:800;margin-bottom:12px"></div>
+      <div style="text-align:right"><button id="popupOkClose">OK</button></div>
+    </div>
+  </div>
+
+  <div class="modal" id="confirmModal">
+    <div class="panel">
+      <div id="confirmText" style="font-weight:800;margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button id="confirmYes">Yes</button>
+        <button id="confirmNo" class="ghost">No</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- *** NEW: Loading Modal *** -->
+  <div class="modal" id="loadingModal">
+      <div class="panel">
+          <div id="loadingText" style="font-weight:800; text-align:center;">Loading...</div>
+      </div>
+  </div>
+
+
+  <!-- firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+  <script src="script-idk.js"></script>
+
+</body>
+</html>
