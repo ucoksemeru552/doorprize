@@ -1,7 +1,7 @@
 // ====== CONFIGURE THESE ======
 const FIREBASE_CONFIG = {
   // IMPORTANT: fill this with your actual firebase project settings
-  apiKey: "AIzaSyAleOmoznhqDBW04Kr2T3q4aucv2KJ58gc",
+  apikkey: process.env.firebase_api_key,
   authDomain: "doorprize-katar-06.firebaseapp.com",
   databaseURL: "https://doorprize-katar-06-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "doorprize-katar-06",
@@ -414,3 +414,4 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('confirmModal').classList.remove('show');
     });
 });
+
