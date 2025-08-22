@@ -4,14 +4,15 @@ const path = require('path');
 
 module.exports = {
   mode: 'production',
-  entry: './index.js', // your main javascript file
+  entry: './script-idk.js', // change this to your main JS file
   output: {
     filename: 'main.js',
     path: path.resolve(__dirname, 'dist'),
+    clean: true, // this will clean the dist folder before each build
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: './index.html' // your main html file
+      template: './idk.html' // change this to your main HTML file
     }),
     new Dotenv() // this handles the environment variables
   ]
