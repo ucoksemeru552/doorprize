@@ -18,7 +18,7 @@ firebase.initializeApp(FIREBASE_CONFIG);
 // Initialize App Check
 const appCheck = firebase.appCheck();
 appCheck.activate(
-  '6Ld7iQoqAAAAAGf-251r2np9p23_hBx-v0J_xX1o', // This is a public site key
+  '6Ld7iQoqAAAAAGf-251r2np9p23_hBx-v0J_xX1o', // This is your public site key
   true);
 
 const auth = firebase.auth();
@@ -316,30 +316,36 @@ function listenToData() {
     });
 }
 
-// --- NEW ATOMIC DELETE FUNCTIONS ---
+// --- DEBUG DELETE FUNCTIONS ---
 
-function resetRegistration(key, name, deviceId) {
+async function resetRegistration(key, name, deviceId) {
     confirmAction(`Ini akan menghapus ${name} dari daftar dan mengizinkan perangkat mereka untuk mendaftar lagi. Lanjutkan?`, async (ok) => {
         if (!ok) return;
 
         showLoading('Mereset pendaftaran...');
+        console.log(`--- STARTING RESET FOR ${name} ---`);
 
         try {
-            const updates = {};
-            updates[`/users/${key}`] = null;
-            if (deviceId) {
-                updates[`/deviceRegistrations/${deviceId}`] = null;
+            console.log(`Attempting to delete /users/${key}`);
+            await usersRef.child(key).remove();
+            console.log(`SUCCESS: Deleted /users/${key}`);
+
+            if (deviceId && deviceId !== "undefined") {
+                console.log(`Attempting to delete /deviceRegistrations/${deviceId}`);
+                await deviceRegRef.child(deviceId).remove();
+                console.log(`SUCCESS: Deleted /deviceRegistrations/${deviceId}`);
+            } else {
+                console.log("Skipping device registration delete (no valid deviceId).");
             }
 
-            await db.ref().update(updates);
-
             hideLoading();
-            showMessage(`${name} telah direset. Minta mereka untuk me-refresh halaman mereka untuk mendaftar lagi.`, false);
+            showMessage(`${name} telah direset.`, false);
+            console.log(`--- RESET COMPLETE FOR ${name} ---`);
 
         } catch (error) {
             hideLoading();
-            console.error("Error resetting registration:", error);
-            showMessage(`Gagal mereset ${name}: ${error.message}`, true);
+            console.error("Error during resetRegistration:", error);
+            showMessage(`GAGAL mereset ${name}: ${error.message}`, true);
         }
     });
 }
@@ -349,30 +355,45 @@ async function deleteUser(key, name, deviceId) {
         if (!ok) return;
 
         showLoading('Menghapus data...');
+        console.log(`--- STARTING DELETE FOR ${name} ---`);
 
         try {
-            const updates = {};
-            updates[`/users/${key}`] = null;
-            if (deviceId) {
-                updates[`/deviceRegistrations/${deviceId}`] = null;
-            }
-
+            // Step 1: Delete from winners
             const winnerSnapshot = await winnersRef.orderByChild('key').equalTo(key).once('value');
             if (winnerSnapshot.exists()) {
+                const winnerDeletions = [];
                 winnerSnapshot.forEach(child => {
-                    updates[`/winners/${child.key}`] = null;
+                    console.log(`Attempting to delete /winners/${child.key}`);
+                    winnerDeletions.push(winnersRef.child(child.key).remove());
                 });
+                await Promise.all(winnerDeletions);
+                console.log('SUCCESS: Deleted from winners.');
+            } else {
+                console.log("No winner entry to delete.");
             }
 
-            await db.ref().update(updates);
+            // Step 2: Delete from users
+            console.log(`Attempting to delete /users/${key}`);
+            await usersRef.child(key).remove();
+            console.log(`SUCCESS: Deleted /users/${key}`);
+
+            // Step 3: Delete from deviceRegistrations
+            if (deviceId && deviceId !== "undefined") {
+                console.log(`Attempting to delete /deviceRegistrations/${deviceId}`);
+                await deviceRegRef.child(deviceId).remove();
+                console.log(`SUCCESS: Deleted /deviceRegistrations/${deviceId}`);
+            } else {
+                console.log("Skipping device registration delete (no valid deviceId).");
+            }
 
             hideLoading();
             showMessage(`${name} telah dihapus.`, false);
+            console.log(`--- DELETE COMPLETE FOR ${name} ---`);
 
         } catch (error) {
             hideLoading();
-            console.error("Error deleting user:", error);
-            showMessage(`Gagal menghapus ${name}: ${error.message}`, true);
+            console.error("Error during deleteUser:", error);
+            showMessage(`GAGAL menghapus ${name}: ${error.message}`, true);
         }
     });
 }
