@@ -12,7 +12,7 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: './idk.html' // change this to your main HTML file
+      template: './index.html' // change this to your main HTML file
     }),
     new Dotenv() // this handles the environment variables
   ]
